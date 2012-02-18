@@ -132,13 +132,15 @@ class DoubanFM_CLI:
 	return 'next'
 
     def control_fav(self):
-	self.user.fav_song(r['sid'], r['aid'])
-	print "加心成功"
+	if self.private == True:
+	    self.user.fav_song(r['sid'], r['aid'])
+	    print "加心成功"
 	return 'fav'
 
     def control_del(self):
-        self.songlist = self.user.del_song(r['sid'], r['aid'])
-        print "删歌成功:)"
+	if self.private == True:
+	    self.songlist = self.user.del_song(r['sid'], r['aid'])
+	    print "删歌成功:)"
         return 'del'
 
     def control_pause(self):
@@ -155,7 +157,9 @@ class DoubanFM_CLI:
         rlist, _, _ = select([sys.stdin], [], [], 1)
         if rlist:
             s = sys.stdin.readline()
-	    return self.controls[s[0]]()
+	    if s[0] in self.controls:
+	    	return self.controls[s[0]]()
+	    return None
 
     def song_info(self,r):
 	def replace(matchobj):
@@ -196,11 +200,13 @@ channel_info = u'''
 print channel_info    
 c = raw_input('请输入您想听的频道数字:')
 doubanfm = DoubanFM_CLI(c)
-use_info = u'''
-    跳过输入n，暂停输入p；加心输入f，删歌输入d
-'''
+common_info = u'跳过输入n，暂停输入p'
+private_info = u'加心输入f，删歌输入d'
+use_info = common_info
+if c == 0: 
+    use_info = '；'.join(common_info, private_info)
 print use_info
-while 1:
+while True:
     thread.start_new_thread(doubanfm.start, ())
     gobject.threads_init()
     loop = glib.MainLoop()
