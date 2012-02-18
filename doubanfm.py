@@ -84,6 +84,8 @@ class DoubanFM_CLI:
         bus.add_signal_watch()
         bus.connect("message", self.on_message)
         self.ch = 'http://douban.fm/j/mine/playlist?type=n&h=&channel='+channel
+	self.controls = {'n':self.control_next, 'f':self.control_fav,
+	    'd':self.control_del, 'p':self.control_pause}
 
     def on_message(self, bus, message):
         t = message.type
@@ -107,26 +109,35 @@ class DoubanFM_CLI:
             self.songlist = self.user.playlist()
         else:
             self.songlist = json.loads(urllib.urlopen(self.ch).read())['song']
+	
+    def control_next(self):
+	return 'next'
+
+    def control_fav(self):
+	self.user.fav_song(r['sid'], r['aid'])
+	print "加心成功"
+	return 'fav'
+
+    def control_del(self):
+        self.songlist = self.user.del_song(r['sid'], r['aid'])
+        print "删歌成功:)"
+        return 'del'
+
+    def control_pause(self):
+	if gst.STATE_PLAYING == self.player.get_state()[1]:
+	    self.player.set_state(gst.STATE_PAUSED)
+	    print '已暂停'
+	    return 'pause'
+	else:
+	    self.player.set_state(gst.STATE_PLAYING)
+	    print '继续播放'
+	    return 'continue'
 
     def control(self,r):
         rlist, _, _ = select([sys.stdin], [], [], 1)
         if rlist:
             s = sys.stdin.readline()
-            if s[0] == 'n':
-                return 'next'
-            elif s[0] == 'f' and self.private:
-                self.user.fav_song(r['sid'], r['aid'])
-                print "加心成功:)"
-                return 'fav'
-            elif s[0] == 'd' and self.private:
-                self.songlist = self.user.del_song(r['sid'], r['aid'])
-                print "删歌成功:)"
-                return 'del'
-	    elif s[0] == 'p':
-		if gst.STATE_PLAYING == self.player.get_state()[1]:
-		    return 'pause'
-		else:
-		    return 'continue'
+	    return self.controls[s[0]]()
 
     def start(self):
         self.get_songlist()
@@ -142,12 +153,6 @@ class DoubanFM_CLI:
                     self.player.set_state(gst.STATE_NULL)
                     self.playmode = False
                     break 
-		elif c == 'pause':
-		    self.player.set_state(gst.STATE_PAUSED)
-		    print '已暂停'
-		elif c == 'continue':
-		    self.player.set_state(gst.STATE_PLAYING)
-		    print '继续播放'
         loop.quit()
 
 channel_info = u'''
