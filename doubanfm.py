@@ -83,7 +83,7 @@ class DoubanFM_CLI:
         bus = self.player.get_bus()
         bus.add_signal_watch()
         bus.connect("message", self.on_message)
-        self.ch = 'http://douban.fm/j/mine/playlist?type=p&sid=&channel='+channel
+        self.ch = 'http://douban.fm/j/mine/playlist?type=n&h=&channel='+channel
 
     def on_message(self, bus, message):
         t = message.type
@@ -122,6 +122,11 @@ class DoubanFM_CLI:
                 self.songlist = self.user.del_song(r['sid'], r['aid'])
                 print "删歌成功:)"
                 return 'del'
+	    elif s[0] == 'p':
+		if gst.STATE_PLAYING == self.player.get_state()[1]:
+		    return 'pause'
+		else:
+		    return 'continue'
 
     def start(self):
         self.get_songlist()
@@ -137,6 +142,12 @@ class DoubanFM_CLI:
                     self.player.set_state(gst.STATE_NULL)
                     self.playmode = False
                     break 
+		elif c == 'pause':
+		    self.player.set_state(gst.STATE_PAUSED)
+		    print '已暂停'
+		elif c == 'continue':
+		    self.player.set_state(gst.STATE_PLAYING)
+		    print '继续播放'
         loop.quit()
 
 channel_info = u'''
@@ -155,7 +166,7 @@ print channel_info
 c = raw_input('请输入您想听的频道数字:')
 doubanfm = DoubanFM_CLI(c)
 use_info = u'''
-    跳过输入n，加心输入f，删歌输入d
+    跳过输入n，暂停输入p；加心输入f，删歌输入d
 '''
 print use_info
 while 1:

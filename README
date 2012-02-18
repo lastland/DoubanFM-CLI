@@ -13,6 +13,6 @@ usage: python doubanfm.py
 8  轻音乐兆赫
 9  民谣兆赫
 
-跳过输入n，加心输入f，删歌输入d
+跳过输入n，暂停输入p；加心输入f，删歌输入d
 
 
