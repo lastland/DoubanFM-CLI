@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import sys, os, time, thread, glib, gobject
+import sys, os, re, time, thread, glib, gobject
 import pygst
 pygst.require("0.10")
 import gst, json, urllib, httplib, contextlib, random
@@ -74,7 +74,8 @@ class PrivateFM(object):
 class DoubanFM_CLI:
     def __init__(self, channel):
         self.user = None
-        self.username = ''
+        self.username = None
+	self.password = None
         if channel == '0':
             self.private = True
         else:
@@ -85,7 +86,20 @@ class DoubanFM_CLI:
         bus.connect("message", self.on_message)
         self.ch = 'http://douban.fm/j/mine/playlist?type=n&h=&channel='+channel
 	self.controls = {'n':self.control_next, 'f':self.control_fav,
-	    'd':self.control_del, 'p':self.control_pause}
+	    'd':self.control_del, 'p':self.control_pause} 
+	if os.path.isfile('configs.yaml'):
+	    import yaml
+	    configs = yaml.load(open('configs.yaml'))
+	else:
+	    configs = {}
+	if configs.get('info_format') != None: 
+	    self.info_format = configs['info_format'] 
+	else:
+	    self.info_format = u'正在播放：{title}\t歌手：{artist}\t专辑：{albumtitle}'
+	if configs.get('username') != None:
+	    self.username = configs.get('username')
+	    if configs.get('password') != None:
+		self.password = configs.get('password')
 
     def on_message(self, bus, message):
         t = message.type
@@ -102,9 +116,13 @@ class DoubanFM_CLI:
         if self.user:
             self.songlist = self.user.playlist()
         elif self.private:
-            self.username = raw_input("请输入豆瓣登录账户：") 
-            import getpass
-            self.password = getpass.getpass("请输入豆瓣登录密码：") 
+	    if self.username == None:
+		self.username = raw_input("请输入豆瓣登录账户：") 
+	    else:
+		print "豆瓣登录账户：" + self.username
+	    if self.password == None:
+		import getpass
+		self.password = getpass.getpass("请输入豆瓣登录密码：") 
             self.user = PrivateFM(self.username, self.password)
             self.songlist = self.user.playlist()
         else:
@@ -114,13 +132,15 @@ class DoubanFM_CLI:
 	return 'next'
 
     def control_fav(self):
-	self.user.fav_song(r['sid'], r['aid'])
-	print "加心成功"
+	if self.private == True:
+	    self.user.fav_song(r['sid'], r['aid'])
+	    print "加心成功"
 	return 'fav'
 
     def control_del(self):
-        self.songlist = self.user.del_song(r['sid'], r['aid'])
-        print "删歌成功:)"
+	if self.private == True:
+	    self.songlist = self.user.del_song(r['sid'], r['aid'])
+	    print "删歌成功:)"
         return 'del'
 
     def control_pause(self):
@@ -137,14 +157,24 @@ class DoubanFM_CLI:
         rlist, _, _ = select([sys.stdin], [], [], 1)
         if rlist:
             s = sys.stdin.readline()
-	    return self.controls[s[0]]()
+	    if s[0] in self.controls:
+	    	return self.controls[s[0]]()
+	    return None
+
+    def song_info(self,r):
+	def replace(matchobj):
+	    if matchobj.group(0)[1:-1] in r:
+		return r[matchobj.group(0)[1:-1]]
+	    else:
+		return matchobj(0)
+	return re.sub('\{\w*\}', replace, self.info_format)
 
     def start(self):
         self.get_songlist()
         for r in self.songlist:
             song_uri = r['url']
             self.playmode = True
-            print u'正在播放： '+r['title']+u'     歌手： '+r['artist']
+	    print self.song_info(r)
             self.player.set_property("uri", song_uri)
             self.player.set_state(gst.STATE_PLAYING)
             while self.playmode:
@@ -170,11 +200,13 @@ channel_info = u'''
 print channel_info    
 c = raw_input('请输入您想听的频道数字:')
 doubanfm = DoubanFM_CLI(c)
-use_info = u'''
-    跳过输入n，暂停输入p；加心输入f，删歌输入d
-'''
+common_info = u'跳过输入n，暂停输入p'
+private_info = u'加心输入f，删歌输入d'
+use_info = common_info
+if c == 0: 
+    use_info = '；'.join(common_info, private_info)
 print use_info
-while 1:
+while True:
     thread.start_new_thread(doubanfm.start, ())
     gobject.threads_init()
     loop = glib.MainLoop()

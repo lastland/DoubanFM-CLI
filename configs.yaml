@@ -1,0 +1,3 @@
+# username: username here
+# password: password here
+info_format: "正在播放：{title}\t歌手：{artist}\t专辑：{albumtitle}"
