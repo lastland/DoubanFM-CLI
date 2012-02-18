@@ -74,7 +74,8 @@ class PrivateFM(object):
 class DoubanFM_CLI:
     def __init__(self, channel):
         self.user = None
-        self.username = ''
+        self.username = None
+	self.password = None
         if channel == '0':
             self.private = True
         else:
@@ -85,13 +86,20 @@ class DoubanFM_CLI:
         bus.connect("message", self.on_message)
         self.ch = 'http://douban.fm/j/mine/playlist?type=n&h=&channel='+channel
 	self.controls = {'n':self.control_next, 'f':self.control_fav,
-	    'd':self.control_del, 'p':self.control_pause}
+	    'd':self.control_del, 'p':self.control_pause} 
 	if os.path.isfile('configs.yaml'):
 	    import yaml
-	    self.configs = yaml.load(open('configs.yaml'))
-	    self.info_format = configs['info_format']
+	    configs = yaml.load(open('configs.yaml'))
+	else:
+	    configs = {}
+	if configs.get('info_format') != None: 
+	    self.info_format = configs['info_format'] 
 	else:
 	    self.info_format = u'正在播放：{title}\t歌手：{artist}\t专辑：{albumtitle}'
+	if configs.get('username') != None:
+	    self.username = configs.get('username')
+	    if configs.get('password') != None:
+		self.password = configs.get('password')
 
     def on_message(self, bus, message):
         t = message.type
@@ -108,9 +116,13 @@ class DoubanFM_CLI:
         if self.user:
             self.songlist = self.user.playlist()
         elif self.private:
-            self.username = raw_input("请输入豆瓣登录账户：") 
-            import getpass
-            self.password = getpass.getpass("请输入豆瓣登录密码：") 
+	    if self.username == None:
+		self.username = raw_input("请输入豆瓣登录账户：") 
+	    else:
+		print "豆瓣登录账户：" + self.username
+	    if self.password == None:
+		import getpass
+		self.password = getpass.getpass("请输入豆瓣登录密码：") 
             self.user = PrivateFM(self.username, self.password)
             self.songlist = self.user.playlist()
         else:
@@ -158,7 +170,6 @@ class DoubanFM_CLI:
         for r in self.songlist:
             song_uri = r['url']
             self.playmode = True
-	    print r
 	    print self.song_info(r)
             self.player.set_property("uri", song_uri)
             self.player.set_state(gst.STATE_PLAYING)
