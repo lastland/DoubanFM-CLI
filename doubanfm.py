@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import sys, os, time, thread, glib, gobject
+import sys, os, re, time, thread, glib, gobject
 import pygst
 pygst.require("0.10")
 import gst, json, urllib, httplib, contextlib, random
@@ -86,6 +86,12 @@ class DoubanFM_CLI:
         self.ch = 'http://douban.fm/j/mine/playlist?type=n&h=&channel='+channel
 	self.controls = {'n':self.control_next, 'f':self.control_fav,
 	    'd':self.control_del, 'p':self.control_pause}
+	if os.path.isfile('configs.yaml'):
+	    import yaml
+	    self.configs = yaml.load(open('configs.yaml'))
+	    self.info_format = configs['info_format']
+	else:
+	    self.info_format = u'正在播放：{title}\t歌手：{artist}\t专辑：{albumtitle}'
 
     def on_message(self, bus, message):
         t = message.type
@@ -139,12 +145,21 @@ class DoubanFM_CLI:
             s = sys.stdin.readline()
 	    return self.controls[s[0]]()
 
+    def song_info(self,r):
+	def replace(matchobj):
+	    if matchobj.group(0)[1:-1] in r:
+		return r[matchobj.group(0)[1:-1]]
+	    else:
+		return matchobj(0)
+	return re.sub('\{\w*\}', replace, self.info_format)
+
     def start(self):
         self.get_songlist()
         for r in self.songlist:
             song_uri = r['url']
             self.playmode = True
-            print u'正在播放： '+r['title']+u'     歌手： '+r['artist']
+	    print r
+	    print self.song_info(r)
             self.player.set_property("uri", song_uri)
             self.player.set_state(gst.STATE_PLAYING)
             while self.playmode:
