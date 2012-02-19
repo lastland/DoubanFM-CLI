@@ -128,22 +128,22 @@ class DoubanFM_CLI:
         else:
             self.songlist = json.loads(urllib.urlopen(self.ch).read())['song']
 	
-    def control_next(self):
+    def control_next(self, r):
 	return 'next'
 
-    def control_fav(self):
+    def control_fav(self, r):
 	if self.private == True:
 	    self.user.fav_song(r['sid'], r['aid'])
 	    print "加心成功"
 	return 'fav'
 
-    def control_del(self):
+    def control_del(self, r):
 	if self.private == True:
 	    self.songlist = self.user.del_song(r['sid'], r['aid'])
 	    print "删歌成功:)"
         return 'del'
 
-    def control_pause(self):
+    def control_pause(self, r):
 	if gst.STATE_PLAYING == self.player.get_state()[1]:
 	    self.player.set_state(gst.STATE_PAUSED)
 	    print '已暂停'
@@ -158,7 +158,7 @@ class DoubanFM_CLI:
         if rlist:
             s = sys.stdin.readline()
 	    if s[0] in self.controls:
-	    	return self.controls[s[0]]()
+	    	return self.controls[s[0]](r)
 	    return None
 
     def song_info(self,r):
@@ -203,8 +203,8 @@ doubanfm = DoubanFM_CLI(c)
 common_info = u'跳过输入n，暂停输入p'
 private_info = u'加心输入f，删歌输入d'
 use_info = common_info
-if c == 0: 
-    use_info = '；'.join(common_info, private_info)
+if c == '0': 
+    use_info = u'；'.join([common_info, private_info])
 print use_info
 while True:
     thread.start_new_thread(doubanfm.start, ())
