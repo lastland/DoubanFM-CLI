@@ -166,7 +166,7 @@ class DoubanFM_CLI:
 	    if matchobj.group(0)[1:-1] in r:
 		return r[matchobj.group(0)[1:-1]]
 	    else:
-		return matchobj(0)
+		return matchobj.group(0)
 	return re.sub('\{\w*\}', replace, self.info_format)
 
     def start(self):
