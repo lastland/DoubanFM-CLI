@@ -185,19 +185,16 @@ class DoubanFM_CLI:
                     break 
         loop.quit()
 
-channel_info = u'''
-    0  私人兆赫
-    1  华语兆赫
-    2  欧美兆赫
-    3  70兆赫
-    4  80兆赫
-    5  90兆赫
-    6  粤语兆赫
-    7  摇滚兆赫
-    8  轻音乐兆赫
-    9  民谣兆赫
-'''
-print channel_info    
+def print_channel_info():
+    import json
+    channel_url = "http://www.douban.com/j/app/radio/channels"
+    channellist = json.loads(urllib.urlopen(channel_url).read())['channels']
+    channellist.sort(key=lambda x: x["channel_id"])
+    for x in channellist:
+        print "%s: %s (%s)" % (x["channel_id"],
+                               x["name"].encode("utf-8"),
+                               x["name_en"].encode("utf-8"))
+print_channel_info()
 c = raw_input('请输入您想听的频道数字:')
 doubanfm = DoubanFM_CLI(c)
 common_info = u'跳过输入n，暂停输入p'
